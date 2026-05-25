@@ -1,0 +1,31 @@
+# Python / local env
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+env/
+ENV/
+.env
+.env.local
+
+# Git / IDE
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# Runtime data (not needed in image)
+data/uploads/*
+data/output/*
+src/data/
+vectordb/
+output/
+src/logs/
+
+# Docs / tests (optional slim image)
+*.md
+!README.md
+
+# OS
+.DS_Store
+Thumbs.db
