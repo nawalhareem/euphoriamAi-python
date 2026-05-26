@@ -18,8 +18,10 @@ def _section(title: str, body: str) -> str:
 
 def compose_coach_system(prompts: dict | None) -> str:
     """Coach Brain + Brain (+ optional stage1_daily_coach from admin)."""
+    from app.services.prompts import _COACH_CONTEXT_RULES
+
     prompts = prompts or {}
-    parts: list[str] = []
+    parts: list[str] = [_COACH_CONTEXT_RULES]
     if prompts.get("coach_brain_prompt"):
         parts.append(_section("COACH BRAIN PROMPT (Goal-Specific OS)", prompts["coach_brain_prompt"]))
     if prompts.get("brain_prompt"):
@@ -31,7 +33,7 @@ def compose_coach_system(prompts: dict | None) -> str:
         )
     if prompts.get("stage1_daily_coach"):
         parts.append(_section("DAILY COACH TURN RULES (admin)", prompts["stage1_daily_coach"]))
-    return "\n\n".join(parts) if parts else STAGE1_DAILY_COACH
+    return "\n\n".join(parts) if len(parts) > 1 else STAGE1_DAILY_COACH
 
 
 def compose_friction_system(prompts: dict | None) -> str:

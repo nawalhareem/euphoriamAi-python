@@ -10,6 +10,7 @@ class CoachReplyRequest(BaseModel):
     user_id: int | None = None
     domain_map: dict = Field(default_factory=dict)
     active_goal_context: dict | None = None
+    user_coach_context: dict | None = None
     checkin: dict = Field(default_factory=dict)
     messages: list[dict] = Field(default_factory=list)
     user_message: str | None = None
@@ -24,15 +25,20 @@ def post_coach_reply(body: CoachReplyRequest):
         messages=body.messages,
         user_message=body.user_message,
         prompts=body.prompts,
+        active_goal_context=body.active_goal_context,
+        user_coach_context=body.user_coach_context,
     )
     return result
 
 
 class FrictionRequest(BaseModel):
     domain_map: dict = Field(default_factory=dict)
+    active_goal_context: dict | None = None
+    user_coach_context: dict | None = None
     checkin: dict = Field(default_factory=dict)
     messages: list[dict] = Field(default_factory=list)
     user_message: str | None = None
+    prompts: dict | None = None
 
 
 @router.post("/friction")
@@ -43,4 +49,6 @@ def post_friction(body: FrictionRequest):
         messages=body.messages,
         user_message=body.user_message,
         prompts=body.prompts,
+        active_goal_context=body.active_goal_context,
+        user_coach_context=body.user_coach_context,
     )

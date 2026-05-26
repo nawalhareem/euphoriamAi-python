@@ -16,16 +16,21 @@ def _build_coach_user_payload(
     checkin: dict,
     messages: list[dict],
     user_message: str | None,
+    *,
+    active_goal_context: dict | None = None,
+    user_coach_context: dict | None = None,
 ) -> str:
-    return json.dumps(
-        {
-            "domain_map": domain_map,
-            "COACH_CHECKIN": checkin,
-            "messages": messages,
-            "user_message": user_message,
-        },
-        indent=2,
-    )
+    payload: dict = {
+        "domain_map": domain_map,
+        "COACH_CHECKIN": checkin,
+        "messages": messages,
+        "user_message": user_message,
+    }
+    if active_goal_context:
+        payload["ACTIVE_GOAL_CONTEXT"] = active_goal_context
+    if user_coach_context:
+        payload["USER_COACH_CONTEXT"] = user_coach_context
+    return json.dumps(payload, indent=2)
 
 
 def coach_reply(
@@ -35,6 +40,8 @@ def coach_reply(
     messages: list[dict] | None = None,
     user_message: str | None = None,
     prompts: dict | None = None,
+    active_goal_context: dict | None = None,
+    user_coach_context: dict | None = None,
 ) -> dict:
     messages = messages or []
     state = checkin.get("current_state") or checkin.get("state") or "clear"
@@ -51,7 +58,14 @@ def coach_reply(
     try:
         parsed = chat_json(
             system,
-            _build_coach_user_payload(domain_map, checkin, messages, user_message),
+            _build_coach_user_payload(
+                domain_map,
+                checkin,
+                messages,
+                user_message,
+                active_goal_context=active_goal_context,
+                user_coach_context=user_coach_context,
+            ),
         )
         if parsed.get("assistant_message"):
             return _normalize_coach_response(parsed, domain_map)
@@ -59,8 +73,14 @@ def coach_reply(
         pass
 
     # Fallback: conversational path
+    context_block = ""
+    if user_coach_context:
+        context_block += f"USER_COACH_CONTEXT:\n{json.dumps(user_coach_context, indent=2)}\n\n"
+    if active_goal_context:
+        context_block += f"ACTIVE_GOAL_CONTEXT:\n{json.dumps(active_goal_context, indent=2)}\n\n"
     system = (
         f"{system}\n\n"
+        f"{context_block}"
         f"domain_map:\n{json.dumps(domain_map, indent=2)}\n\n"
         f"checkin:\n{json.dumps(checkin, indent=2)}"
     )
@@ -96,14 +116,22 @@ def friction_rescue(
     messages: list[dict] | None = None,
     user_message: str | None = None,
     prompts: dict | None = None,
+    active_goal_context: dict | None = None,
+    user_coach_context: dict | None = None,
 ) -> dict:
     messages = messages or []
     if user_message:
         messages = [*messages, {"role": "user", "content": user_message}]
-    payload = json.dumps(
-        {"domain_map": domain_map, "checkin": checkin, "messages": messages},
-        indent=2,
-    )
+    payload_obj: dict = {
+        "domain_map": domain_map,
+        "checkin": checkin,
+        "messages": messages,
+    }
+    if active_goal_context:
+        payload_obj["ACTIVE_GOAL_CONTEXT"] = active_goal_context
+    if user_coach_context:
+        payload_obj["USER_COACH_CONTEXT"] = user_coach_context
+    payload = json.dumps(payload_obj, indent=2)
     system = compose_friction_system(prompts)
     try:
         parsed = chat_json(system, payload)

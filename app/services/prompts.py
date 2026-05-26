@@ -39,9 +39,18 @@ MAP_RESISTANCE_EXTRACT_FALLBACK = (
     "success_strategy, daily_rep, top_3_avoidance_behaviours, protector_rule, recovery_speed."
 )
 
+_COACH_CONTEXT_RULES = """USER CONTEXT RULES (mandatory):
+- The user JSON includes USER_COACH_CONTEXT with this member's real data: name, active goal, map resistance, proof logs, past in-app coach sessions, and 1:1 UserSession history.
+- You HAVE this data. NEVER say you lack access to personal information, history, or preferences.
+- Address the member by first_name from user_profile when natural.
+- Ground every reply in their active goal, failure/success strategies, map resistance, recent proof, and prior coach sessions when relevant.
+- Reference specific past details when helpful (e.g. what they mapped in resistance, prior session themes, 1:1 session summaries).
+- If they ask whether you know their name or history, confirm what you see in USER_COACH_CONTEXT and continue coaching."""
+
 _COACH_FALLBACK = (
     "You are Euphoriam Daily Coach for one active goal. "
-    "Return JSON: assistant_message, green_rep, detected_failure_strategy, writeback_hints. "
+    + _COACH_CONTEXT_RULES
+    + " Return JSON: assistant_message, green_rep, detected_failure_strategy, writeback_hints. "
     "Load Coach Brain Prompt and Brain Prompt from admin — this stub means DB rows are missing."
 )
 
