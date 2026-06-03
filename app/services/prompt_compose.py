@@ -1,4 +1,5 @@
 """Compose system prompts from DB payloads sent by Node (with code fallbacks)."""
+from __future__ import annotations
 
 from app.services.prompts import (
     MAP_RESISTANCE_EXTRACT,

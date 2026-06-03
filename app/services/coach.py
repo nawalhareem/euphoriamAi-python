@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 
 from app.services.llm import chat_json, chat_text

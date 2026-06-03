@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
@@ -10,9 +12,11 @@ class TurnRequest(BaseModel):
     active_goal_context: dict = Field(default_factory=dict)
     transcript: list[dict] = Field(default_factory=list)
     messages: list[dict] | None = None
-    target_count: int = 12
+    target_count: int = 25
     user_name: str = "there"
     prompts: dict | None = None
+    last_answer_valid: bool = True
+    stay_on_question: int | None = None
 
 
 @router.post("/turn")
@@ -24,6 +28,8 @@ def post_turn(body: TurnRequest):
         target_count=body.target_count,
         user_name=body.user_name,
         prompts=body.prompts,
+        last_answer_valid=body.last_answer_valid,
+        stay_on_question=body.stay_on_question,
     )
 
 

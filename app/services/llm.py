@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from openai import OpenAI
 
 from app.config import settings
@@ -14,7 +16,14 @@ def get_client() -> OpenAI:
     return _client
 
 
-def chat_json(system: str, user: str, *, model: str | None = None) -> dict:
+def chat_json(
+    system: str,
+    user: str,
+    *,
+    model: str | None = None,
+    temperature: float = 0.2,
+    max_completion_tokens: int = 2000,
+) -> dict:
     client = get_client()
     res = client.chat.completions.create(
         model=model or settings.openai_model,
@@ -23,8 +32,8 @@ def chat_json(system: str, user: str, *, model: str | None = None) -> dict:
             {"role": "user", "content": user},
         ],
         response_format={"type": "json_object"},
-        temperature=0.2,
-        max_completion_tokens=2000,
+        temperature=temperature,
+        max_completion_tokens=max_completion_tokens,
     )
     import json
 
