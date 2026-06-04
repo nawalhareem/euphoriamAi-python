@@ -19,10 +19,18 @@ def _section(title: str, body: str) -> str:
 
 def compose_coach_system(prompts: dict | None) -> str:
     """Coach Brain + Brain (+ optional stage1_daily_coach from admin)."""
-    from app.services.prompts import _COACH_CONTEXT_RULES
+    from app.services.prompts import (
+        _COACH_CONTEXT_RULES,
+        _COACH_PROOF_INTEGRATION_RULES,
+        _COACH_SESSION_PHASE_RULES,
+    )
 
     prompts = prompts or {}
-    parts: list[str] = [_COACH_CONTEXT_RULES]
+    parts: list[str] = [
+        _COACH_PROOF_INTEGRATION_RULES,
+        _COACH_SESSION_PHASE_RULES,
+        _COACH_CONTEXT_RULES,
+    ]
     if prompts.get("coach_brain_prompt"):
         parts.append(_section("COACH BRAIN PROMPT (Goal-Specific OS)", prompts["coach_brain_prompt"]))
     if prompts.get("brain_prompt"):

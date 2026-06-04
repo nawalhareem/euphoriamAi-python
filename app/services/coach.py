@@ -70,7 +70,7 @@ def coach_reply(
             ),
         )
         if parsed.get("assistant_message"):
-            return _normalize_coach_response(parsed, domain_map)
+            return _normalize_coach_response(parsed, domain_map, checkin)
     except Exception:
         pass
 
@@ -88,9 +88,14 @@ def coach_reply(
     )
     llm_messages = [{"role": m["role"], "content": m["content"]} for m in messages if m.get("content")]
     text = chat_text(system, llm_messages)
+    progress_mode = (
+        str(checkin.get("current_state") or "") == "progress"
+        or bool(checkin.get("user_reported_proof"))
+        or str(checkin.get("session_phase") or "").startswith("proof_integration")
+    )
     daily_rep = domain_map.get("daily_rep") or {}
     green_rep = None
-    if isinstance(daily_rep, dict) and daily_rep.get("name"):
+    if not progress_mode and isinstance(daily_rep, dict) and daily_rep.get("name"):
         green_rep = {
             "name": daily_rep["name"],
             "steps": daily_rep.get("steps") or [],
@@ -153,9 +158,27 @@ def friction_rescue(
     return {"assistant_message": text, "green_rep": None}
 
 
-def _normalize_coach_response(parsed: dict, domain_map: dict) -> dict:
+def _normalize_coach_response(
+    parsed: dict, domain_map: dict, checkin: dict | None = None
+) -> dict:
+    checkin = checkin or {}
+    session_phase = str(checkin.get("session_phase") or "")
+    user_reported_proof = bool(checkin.get("user_reported_proof"))
+    state = str(checkin.get("current_state") or "")
+
+    progress_mode = (
+        state == "progress"
+        or user_reported_proof
+        or session_phase.startswith("proof_integration")
+    )
+
     green_rep = parsed.get("green_rep")
-    if not green_rep:
+    hints = parsed.get("writeback_hints") or {}
+    assign_new = bool(hints.get("assign_new_green_rep"))
+
+    if progress_mode and not assign_new:
+        green_rep = None
+    elif not green_rep:
         daily_rep = domain_map.get("daily_rep")
         if isinstance(daily_rep, dict) and daily_rep.get("name"):
             green_rep = {
@@ -163,6 +186,7 @@ def _normalize_coach_response(parsed: dict, domain_map: dict) -> dict:
                 "steps": daily_rep.get("steps") or [],
                 "win_condition": daily_rep.get("win_condition") or "",
             }
+
     return {
         "assistant_message": parsed.get("assistant_message", ""),
         "green_rep": green_rep,
