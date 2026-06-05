@@ -5,111 +5,44 @@ import re
 
 from app.services.llm import chat_json, chat_text
 from app.services.prompt_compose import compose_map_resistance_turn_system
+from app.services.prompts import MAP_RESISTANCE_EXTRACT_RULES
 
 WELCOME_TEMPLATE = """Hi {name}, we're mapping the resistance structure for your **{label}** goal — not a generic life diagnostic.
 
 **Your goal:** {goal}
 **90-day outcome:** {outcome}
 
-About 25 questions, one at a time. Every question stays anchored to this goal.
+About {target_count} questions — your goal and milestones are already set, so we isolate resistance around this outcome only.
+
+One question at a time. Every question stays anchored to this goal.
 
 **Q1 — Resistance when pursuing this goal**
 When you move toward "{goal}", what do you usually do instead, avoid, or tell yourself first that slows you down?"""
 
-# Distinct fallback angles if the model returns empty JSON (Q1 uses welcome template).
 _FALLBACK_TOPICS: list[tuple[str, str]] = [
-    (
-        "Body and breath",
-        'When you imagine taking the next visible step on "{goal}", what do you notice first in your body, breath, or energy?',
-    ),
-    (
-        "Protector voice",
-        'What inner voice or story shows up to talk you out of moving on "{goal}"?',
-    ),
-    (
-        "Fear if you act",
-        'If you actually moved forward on "{goal}" today, what are you afraid would happen?',
-    ),
-    (
-        "Cost to the goal",
-        'How does your usual avoidance limit the measurable outcome you want from "{goal}"?',
-    ),
-    (
-        "Past pattern",
-        'When you tried something similar to "{goal}" before, what happened — and what made you stop?',
-    ),
-    (
-        "Hidden rule",
-        'What unspoken rule are you obeying that says you cannot fully go for "{goal}" yet?',
-    ),
-    (
-        "Avoidance behaviours",
-        'Name 2–3 specific things you do instead of the next step on "{goal}" (delay, scroll, perfect, hide, people-please, etc.).',
-    ),
-    (
-        "Identity risk",
-        'Who would you have to become to complete "{goal}" — and what feels unsafe about that?',
-    ),
-    (
-        "Visibility or judgement",
-        'On "{goal}", do you avoid being seen, judged, wrong, or needy — which hits hardest and how?',
-    ),
-    (
-        "Smallest disobedience",
-        'What is the smallest action on "{goal}" that would disobey your usual avoidance — even if imperfect?',
-    ),
-    (
-        "Proof in 7 days",
-        'What proof would you accept from yourself in the next 7 days that you are serious about "{goal}"?',
-    ),
-    (
-        "Recovery after action",
-        'After you take a small step on "{goal}", what makes you collapse, overthink, or pull back?',
-    ),
-    (
-        "Resistance belief",
-        'What do you believe about yourself when you avoid working on "{goal}" — even if you never say it out loud?',
-    ),
-    (
-        "Shame hook",
-        'What would feel shameful or exposing if someone saw you struggling with "{goal}"?',
-    ),
-    (
-        "Permission structure",
-        'What conditions do you wait for before you allow yourself to act on "{goal}" (energy, mood, time, approval)?',
-    ),
-    (
-        "All-or-nothing",
-        'Where does all-or-nothing thinking show up around "{goal}" — and how does it justify stopping?',
-    ),
-    (
-        "Comparison trap",
-        'Who do you compare yourself to around "{goal}", and how does that comparison become a reason to delay?',
-    ),
-    (
-        "Energy story",
-        'What story do you tell yourself about your energy or capacity when "{goal}" comes up?',
-    ),
-    (
-        "Commitment meaning",
-        'What does fully committing to "{goal}" mean you can no longer pretend or postpone?',
-    ),
-    (
-        "Self-trust",
-        'When you think about past attempts at "{goal}", what breaks your trust in yourself — and how does that show up now?',
-    ),
-    (
-        "Withdrawal pattern",
-        'After a good day on "{goal}", what pulls you back into old habits — reward, relief, or collapse?',
-    ),
-    (
-        "Success cost",
-        'If you actually succeeded at "{goal}", what uncomfortable change would you have to live with?',
-    ),
-    (
-        "Integration",
-        'What would need to shift in daily life so "{goal}" feels normal rather than a battle every time?',
-    ),
+    ("Body and breath", 'When you imagine taking the next visible step on "{goal}", what do you notice first in your body, breath, or energy?'),
+    ("Protector voice", 'What inner voice or story shows up to talk you out of moving on "{goal}"?'),
+    ("Fear if you act", 'If you actually moved forward on "{goal}" today, what are you afraid would happen?'),
+    ("Cost to the goal", 'How does your usual avoidance limit the measurable outcome you want from "{goal}"?'),
+    ("Past pattern", 'When you tried something similar to "{goal}" before, what happened — and what made you stop?'),
+    ("Hidden rule", 'What unspoken rule are you obeying that says you cannot fully go for "{goal}" yet?'),
+    ("Avoidance behaviours", 'Name 2–3 specific things you do instead of the next step on "{goal}".'),
+    ("Identity risk", 'Who would you have to become to complete "{goal}" — and what feels unsafe about that?'),
+    ("Visibility or judgement", 'On "{goal}", do you avoid being seen, judged, wrong, or needy — which hits hardest and how?'),
+    ("Smallest disobedience", 'What is the smallest action on "{goal}" that would disobey your usual avoidance?'),
+    ("Proof in 7 days", 'What proof would you accept from yourself in the next 7 days that you are serious about "{goal}"?'),
+    ("Recovery after action", 'After you take a small step on "{goal}", what makes you collapse, overthink, or pull back?'),
+    ("Resistance belief", 'What do you believe about yourself when you avoid working on "{goal}" — even if you never say it out loud?'),
+    ("Shame hook", 'What would feel shameful or exposing if someone saw you struggling with "{goal}"?'),
+    ("Permission structure", 'What conditions do you wait for before you allow yourself to act on "{goal}" (energy, mood, time, approval)?'),
+    ("All-or-nothing", 'Where does all-or-nothing thinking show up around "{goal}" — and how does it justify stopping?'),
+    ("Comparison trap", 'Who do you compare yourself to around "{goal}", and how does that comparison become a reason to delay?'),
+    ("Energy story", 'What story do you tell yourself about your energy or capacity when "{goal}" comes up?'),
+    ("Commitment meaning", 'What does fully committing to "{goal}" mean you can no longer pretend or postpone?'),
+    ("Self-trust", 'When you think about past attempts at "{goal}", what breaks your trust in yourself — and how does that show up now?'),
+    ("Withdrawal pattern", 'After a good day on "{goal}", what pulls you back into old habits — reward, relief, or collapse?'),
+    ("Success cost", 'If you actually succeeded at "{goal}", what uncomfortable change would you have to live with?'),
+    ("Integration", 'What would need to shift in daily life so "{goal}" feels normal rather than a battle every time?'),
 ]
 
 
@@ -206,9 +139,11 @@ def _fallback_question(
     *,
     reask: bool = False,
     last_user: str = "",
+    prompts: dict | None = None,
 ) -> str:
-    idx = max(0, min(q_num - 2, len(_FALLBACK_TOPICS) - 1))
-    title, template = _FALLBACK_TOPICS[idx]
+    topics = _FALLBACK_TOPICS
+    idx = max(0, min(q_num - 2, len(topics) - 1))
+    title, template = topics[idx]
     body = template.format(goal=goal)
     if reask:
         preview = last_user[:60].strip() if last_user else ""
@@ -235,6 +170,8 @@ def _build_reask_from_previous(
     last_user: str,
     previous_content: str,
     goal: str,
+    *,
+    prompts: dict | None = None,
 ) -> str:
     preview = (last_user or "").strip()[:80]
     if preview:
@@ -250,7 +187,7 @@ def _build_reask_from_previous(
     body_match = re.search(r"\*\*Q\d+[^*\n]*\*\*\s*\n?([\s\S]*)$", previous_content, re.I)
     body = body_match.group(1).strip() if body_match else ""
     if not body:
-        return _fallback_question(q_num, goal, reask=True, last_user=last_user)
+        return _fallback_question(q_num, goal, reask=True, last_user=last_user, prompts=prompts)
     return f"{lead}\n\n**Q{q_num} — {title}**\n{body}"
 
 
@@ -333,6 +270,7 @@ def _generate_question(
     goal: str,
     last_answer_valid: bool = True,
     last_user: str = "",
+    prompts: dict | None = None,
 ) -> tuple[str, dict]:
     parsed: dict = {}
     content = ""
@@ -379,6 +317,7 @@ def _generate_question(
             goal,
             reask=not last_answer_valid,
             last_user=last_user,
+            prompts=prompts,
         )
         parsed = {
             **parsed,
@@ -421,6 +360,7 @@ def map_resistance_turn(
             label=label,
             goal=goal,
             outcome=outcome,
+            target_count=target_count,
         )
         assistant = {"role": "assistant", "content": welcome}
         full = [assistant]
@@ -448,7 +388,9 @@ def map_resistance_turn(
 
     if not last_answer_valid:
         prev_q = _find_last_assistant_question(transcript)
-        content = _build_reask_from_previous(next_q, last_user_text, prev_q, goal)
+        content = _build_reask_from_previous(
+            next_q, last_user_text, prev_q, goal, prompts=prompts
+        )
         full = [*transcript, {"role": "assistant", "content": content}]
         answered = _count_answered(transcript, last_answer_valid=False)
         return _pack_turn(
@@ -480,6 +422,7 @@ def map_resistance_turn(
         goal=goal,
         last_answer_valid=last_answer_valid,
         last_user=last_user_text,
+        prompts=prompts,
     )
 
     if not last_answer_valid and content:
@@ -556,15 +499,7 @@ def extract_domain_structure(
 ) -> dict:
     from app.services.prompt_compose import compose_map_extract_system
 
-    instruction = (
-        "Extract the full GOAL_DIAGNOSIS_OUTPUT for this Map Resistance session. "
-        "Identify primary_vortex_signature (EO + lack_channel + avoid_type) from the Brain Prompt library. "
-        "Return human-readable labels for EO, lack_channel, and avoid_type (e.g. 'Needs Not OK', 'Security', 'Rejection-protector') — not bare codes like NON, S, R. "
-        "Set signature_id as EO+Lack+Avoid codes (e.g. NON+S+R). "
-        "Derive failure_strategy, top_3_avoidance_behaviours, success_strategy (title, behaviour, belief, success_rule, behaviours[]), and daily_rep from the transcript. "
-        "Do NOT put course/module names (e.g. 'UC Module...') in success_strategy.behaviour. "
-        "Do not copy today_visible_action from ACTIVE_GOAL_CONTEXT into daily_rep unless it is clearly the green rep."
-    )
+    instruction = MAP_RESISTANCE_EXTRACT_RULES
     payload = json.dumps(
         {
             "instruction": instruction,

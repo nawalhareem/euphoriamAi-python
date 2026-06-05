@@ -2,8 +2,29 @@ from __future__ import annotations
 
 import json
 
+import re
+
 from app.services.llm import chat_json, chat_text
 from app.services.prompt_compose import compose_coach_system, compose_friction_system
+
+_FRAMEWORK_TERMS = re.compile(
+    r"\b(vortex|signature\s*id|EO\b|lack\s*channel|avoidance\s*channel|QGC|CL\s*estimate|"
+    r"consciousness\s*level|gravity\s*depth|orbit\s*pattern|abducted\s*by\s*vortex)\b",
+    re.I,
+)
+_REPORT_HEADERS = re.compile(
+    r"^(current\s+goal|current\s+milestone|last\s+green\s+rep|recent\s+patterns|"
+    r"last\s+session|loading)\s*:",
+    re.I | re.M,
+)
+
+
+def _sanitize_user_facing(text: str | None) -> str:
+    if not text:
+        return ""
+    out = _REPORT_HEADERS.sub("", text)
+    out = _FRAMEWORK_TERMS.sub("pattern", out)
+    return re.sub(r"\n{3,}", "\n\n", out).strip()
 
 STATE_LABELS = {
     "abducted": "Abducted by Vortex",
@@ -32,6 +53,8 @@ def _build_coach_user_payload(
         payload["ACTIVE_GOAL_CONTEXT"] = active_goal_context
     if user_coach_context:
         payload["USER_COACH_CONTEXT"] = user_coach_context
+        if user_coach_context.get("COACH_MEMORY_CONTEXT"):
+            payload["COACH_MEMORY_CONTEXT"] = user_coach_context["COACH_MEMORY_CONTEXT"]
     return json.dumps(payload, indent=2)
 
 
@@ -109,7 +132,7 @@ def coach_reply(
         }
 
     return {
-        "assistant_message": text,
+        "assistant_message": _sanitize_user_facing(text),
         "green_rep": green_rep,
         "detected_failure_strategy": None,
         "writeback_hints": {},
@@ -165,20 +188,42 @@ def _normalize_coach_response(
     session_phase = str(checkin.get("session_phase") or "")
     user_reported_proof = bool(checkin.get("user_reported_proof"))
     state = str(checkin.get("current_state") or "")
+    coaching_mode = str(checkin.get("coaching_mode") or "")
+    execute_mode = coaching_mode == "execute"
 
     progress_mode = (
         state == "progress"
         or user_reported_proof
-        or session_phase.startswith("proof_integration")
     )
 
     green_rep = parsed.get("green_rep")
     hints = parsed.get("writeback_hints") or {}
+    if hints.get("gravity_rating") is not None:
+        try:
+            hints["gravity_rating"] = max(1, min(10, int(float(hints["gravity_rating"]))))
+        except (TypeError, ValueError):
+            hints.pop("gravity_rating", None)
+    if hints.get("cl_estimate") is not None:
+        try:
+            hints["cl_estimate"] = max(1.0, min(5.0, float(hints["cl_estimate"])))
+        except (TypeError, ValueError):
+            hints.pop("cl_estimate", None)
     assign_new = bool(hints.get("assign_new_green_rep"))
 
-    if progress_mode and not assign_new:
+    if execute_mode and not green_rep:
+        daily_rep = domain_map.get("daily_rep")
+        if isinstance(daily_rep, dict) and daily_rep.get("name"):
+            green_rep = {
+                "name": daily_rep["name"],
+                "steps": daily_rep.get("steps") or [],
+                "win_condition": daily_rep.get("win_condition") or "",
+            }
+            hints = {**hints, "assign_new_green_rep": True}
+            assign_new = True
+
+    if not assign_new and not green_rep:
         green_rep = None
-    elif not green_rep:
+    elif progress_mode and not assign_new and not green_rep:
         daily_rep = domain_map.get("daily_rep")
         if isinstance(daily_rep, dict) and daily_rep.get("name"):
             green_rep = {
@@ -188,8 +233,8 @@ def _normalize_coach_response(
             }
 
     return {
-        "assistant_message": parsed.get("assistant_message", ""),
+        "assistant_message": _sanitize_user_facing(parsed.get("assistant_message", "")),
         "green_rep": green_rep,
         "detected_failure_strategy": parsed.get("detected_failure_strategy"),
-        "writeback_hints": parsed.get("writeback_hints") or {},
+        "writeback_hints": hints,
     }
