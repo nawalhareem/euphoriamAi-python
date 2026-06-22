@@ -62,7 +62,18 @@ Return JSON only with ALL keys populated where possible:
   "core_fear": string,
   "perceived_risk": string,
   "past_pattern": string|null,
-  "required_role": string
+  "required_role": string,
+  "structure_type": "Orbit"|"Towards & Away"|"Something's Wrong With Me"|"Progress with Snapback",
+  "contradiction_statement": string,
+  "structure_takeover_moment": {
+    "trigger": string,
+    "rule_obeyed": string,
+    "sabotage_sequence": string
+  },
+  "flip_belief": string,
+  "flip_rule": string,
+  "flip_90_day_projection": string,
+  "contradiction_rate": "low"|"medium"|"high"
 }
 
 Rules:
@@ -70,7 +81,12 @@ Rules:
 - failure_strategy.behaviours MUST be the same 3 items as top_3_avoidance_behaviours.
 - recovery_speed is required (Slow, Moderate, or Fast).
 - daily_rep = green rep from diagnosis; do NOT copy today_visible_action unless it is the rep.
-- success_strategy = structural opposite from Brain Prompt for this signature."""
+- success_strategy = structural opposite from Brain Prompt for this signature.
+- contradiction_statement MUST spell out goal vs structure: what they want vs what their structure powers instead.
+- structure_takeover_moment = the moment structure takes over: trigger, rule obeyed, sabotage sequence (orbit).
+- flip_belief / flip_rule = opposite code install from Brain Prompt (NOT the vortex belief).
+- success_strategy.belief MUST be the flip (opposite of vortex); behaviours = physical actions if the flip were true.
+- flip_90_day_projection = what would happen in 90 days if they lived the flip toward their goal."""
 
 _COACH_DIRECTIVE_PROGRESSION_RULES = """DIRECTIVE COACHING PROGRESSION (mandatory — avoid interviewer mode):
 

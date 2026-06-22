@@ -512,4 +512,6 @@ def extract_domain_structure(
     system = compose_map_extract_system(prompts)
     parsed = chat_json(system, payload, max_completion_tokens=4000)
     parsed["map_resistance_complete"] = True
-    return parsed
+    from app.services.resistance_narrative import enrich_resistance_narrative
+
+    return enrich_resistance_narrative(parsed, active_goal_context=active_goal_context)
