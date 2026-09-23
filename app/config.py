@@ -7,8 +7,8 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     openai_api_key: str = ""
-    openai_model: str = "gpt-4o"
-    openai_model_mini: str = "gpt-4o-mini"
+    openai_model: str = "gpt-6-sol"
+    openai_model_mini: str = "gpt-6-luna"
     # Coach check-in only; empty falls back to openai_model. Env: COACH_OPENAI_MODEL
     coach_openai_model: str = ""
     ai_internal_key: str = ""

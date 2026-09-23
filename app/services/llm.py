@@ -48,6 +48,7 @@ def chat_json(
     t0 = time.perf_counter()
     res = client.chat.completions.create(
         model=resolved_model,
+        reasoning_effort="none",
         messages=[
             {"role": "system", "content": system},
             {"role": "user", "content": user},
@@ -143,6 +144,7 @@ def chat_json_stream(
     t0 = time.perf_counter()
     stream = client.chat.completions.create(
         model=resolved_model,
+        reasoning_effort="none",
         messages=[
             {"role": "system", "content": system},
             {"role": "user", "content": user},
@@ -199,6 +201,7 @@ def chat_text(system: str, messages: list[dict], *, model: str | None = None) ->
     client = get_client()
     res = client.chat.completions.create(
         model=model or settings.openai_model,
+        reasoning_effort="none",
         messages=[{"role": "system", "content": system}, *messages],
         temperature=0.4,
         max_completion_tokens=1200,
@@ -215,6 +218,7 @@ def chat_text_stream(
     client = get_client()
     stream = client.chat.completions.create(
         model=model or settings.openai_model,
+        reasoning_effort="none",
         messages=[{"role": "system", "content": system}, *messages],
         temperature=0.4,
         max_completion_tokens=1200,
